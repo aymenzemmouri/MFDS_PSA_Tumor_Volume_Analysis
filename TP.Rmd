@@ -1,0 +1,99 @@
+```{r}
+#install.packages("FactoMineR")
+#install.packages("factoextra")
+#install.packages("dplyr")
+#install.packages("ggplot2")
+library(dplyr)
+library(ggplot2)
+library(factoextra)
+library(FactoMineR)
+```
+
+
+```{r}
+# Chargement de la base de données
+prostate <- read.table("prostate_dataset.txt", header = TRUE)
+# Nombre de données dans le jeu de données
+nrow(prostate)
+# Résumé des variables
+summary(prostate)
+```
+
+```{r}
+# Nuages de points
+plot(prostate)
+```
+
+```{r}
+# ------Mise à l'échelle logarithmique
+
+# Création d'une copie de "prostate"
+data_transforme <- data
+
+# Sélection des variables à transformer (toutes sauf "âge")
+variables_a_transformer <- c("vol", "wht", "bh", "pc", "psa")
+
+# Application la transformation logarithmique
+data_transforme <- data_transforme %>%
+  mutate(across(all_of(variables_a_transformer), ~log(.), .names = "l{.col}"))
+
+# Changement de la nommenclature
+data_transforme <- data_transforme %>%
+  select(starts_with("l"))
+plot(data_transforme)
+```
+
+```{r}
+#Moyennes et variances
+print("Moyennes")
+means <- apply(data_transforme, 2, mean)
+means
+print("Variances")
+vars <- apply(data_transforme, 2, var)
+vars
+```
+
+```{r}
+acp <- PCA(data_transforme,
+           scale.unit = TRUE,  # Pour centrer et réduire les variables
+           quali.sup = NULL,   # Liste des variables qualitatives supplémentaires (le cas échéant)
+           quanti.sup = NULL,  # Liste des variables quantitatives supplémentaires (le cas échéant)
+           graph = TRUE)      # Pour éviter de générer les graphiques par défaut
+acp
+```
+
+```{r}
+pve <- acp$eig[,2]
+pve_cumul <- acp$eig[,3]
+
+# Tracer le PVE par composant
+barplot(pve, main = "PVE", xlab = "Composant", ylab = "PVE", col = "blue")
+
+# Tracer le PVE cumulé
+barplot(pve_cumul, main = "PVE Cumulé", xlab = "Composant", ylab = "PVE Cumulé", col = "green")
+```
+
+```{r}
+# Calcul des corrélations entre la variable "lpsa" et les autres variables du dataframe "data_transforme"
+# en excluant la colonne "lpsa" elle-même.
+correlations <- cor(data_transforme$lpsa, data_transforme[, -which(names(data_transforme) == "lpsa")])
+
+# Afficher les coefficients de corrélation résultants.
+correlations
+
+```
+
+```{r}
+# Extraction des variables "lvol" et "lpsa" du dataframe "data_transforme"
+# lvol est la variable la plus correlée avec lpsa
+X <- data_transforme$lvol  # Variable indépendante (X)
+Y <- data_transforme$lpsa  # Variable dépendante (Y)
+
+# Création d'un modèle de régression linéaire avec "lpsa" comme variable dépendante et "lvol" comme variable indépendante
+modele_regression <- lm(Y ~ X)
+
+# Affichage du résumé statistique du modèle de régression linéaire
+summary(modele_regression)
+
+```
+
